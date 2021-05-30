@@ -1,12 +1,12 @@
 import discord
 from discord import user
 import requests
-import json, random
+import json, random, os
 from DB import create_user, create_table, delete_user, create_transaction
 import DB
 
 client = discord.Client()
-token = "ODQ4MTQ1NzIyMTI5MzgzNDM1.YLIXQQ.9QAPx5L62mAqsPiupeVuFYddKJ0"
+token = os.environ.get('DISCORD_TOKEN')
 starter_encouragements = [
   "Cheer up!",
   "Hang in there.",
