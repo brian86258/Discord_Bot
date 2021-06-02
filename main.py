@@ -2,11 +2,13 @@ import discord
 from discord import user
 import requests
 import json, random, os
-from DB import create_user, create_table, delete_user, create_transaction
 import DB
+import emoji
+from keep_alive import keep_alive
+from discord_components import DiscordComponents, Button, ButtonStyle, InteractionType
 
 client = discord.Client()
-token = os.environ.get('DISCORD_TOKEN')
+token = os.environ['DISCORD_TOKEN']
 starter_encouragements = [
   "Cheer up!",
   "Hang in there.",
@@ -35,6 +37,106 @@ async def on_ready():
 #     {}
 #     '''.format(channel.name, when))
 
+async def send_join_msg(member) :
+    start_msg = '''
+Hello, This is Brina's Bot testing channel
+
+```diff
+- Discord red text
+```
+
+```css
+[Discord orange-red text]
+```
+Include emoji :watermelon:
+GIF : 
+https://tenor.com/view/wtf-huh-what-the-heck-puppy-cute-gif-17738058
+    '''
+    embed = discord.Embed(
+        color= discord.Colour.dark_teal() # or any color you want
+    )
+    embed.add_field(name='If you wish to know more please go to following link,' ,value='[Getting started Link](https://discord.com/channels/741527808400031854/849631605660057630/849631816557133874)', inline=False)
+    embed.add_field(name='Second things you need to know' ,value='[Go to another Channel](https://discord.com/channels/741527808400031854/848522274528034837/849646113140768788)', inline=False)
+    embed.add_field(name='VIdeo ' ,value='[VIdeo](https://www.youtube.com/watch?v=EphQsR3-_-U&ab_channel=CeeCee)', inline=False)
+
+    
+    channel = member.channel
+    await member.send(content = start_msg ,embed=embed)
+
+result = {}
+async def interaction(ctx):
+    page1 = discord.Embed(
+        title = "Invitation to xxx presentaion",
+        description = "This event is hosted by xxxx, and xxxx is going to share his/her experience in finding xxx job. PLease let us know whether your interested! NOTE: PLEASE select the following two emoji to join or not",
+        colour = discord.Colour.orange()
+    )
+    page2 = discord.Embed(
+        title = "Sorry to see that you declined our invitation",
+        description = "Hope we can see you next time!",
+        colour = discord.Colour.orange()
+    )
+    page3 = discord.Embed(
+        title = "Glad you choose to accept!",
+        description = "Looking forward to seeing you in person!",
+        colour = discord.Colour.orange()
+    )
+    pages = [page1, page2, page3]
+    
+    message = await ctx.channel.send(embed = page1)
+    # message = await ctx.author.send(embed = page1)
+
+    await message.add_reaction("\U0001F44D")
+    await message.add_reaction("\U0001F44E")
+
+    # print(message)
+    # print(user)
+    i = 0
+    reaction = None
+    def check(reaction, user):
+        return True
+
+        # print(user, ctx.author, message.author)
+        ## KEY, If in the public channel, the user will be the ctx.author (the person typein $interaction)
+        # return user == ctx.author 
+
+        ## KEY, If in the private(DM) channel, the user wiil become the bot, so we need to check 
+        # return user == message.author
+
+    while True:
+        if str(reaction) =="\U0001F44E":
+            print('DECLINED')
+            i = 1
+            await message.edit(embed = pages[i])
+        elif str(reaction) == "\U0001F44D":
+            i = 2
+            print('ACCEPT')
+            await message.edit(embed = pages[i])
+        
+        try:
+            # KEY, for the same reason, in the public channel, the user will be the actual person
+            # However, in the DM, user is the bot
+            reaction, user = await client.wait_for('reaction_add', timeout= 10.0, check = check)
+            print(reaction, user, ctx.author)
+            global result
+            result[user.name] = i
+            # await message.remove_reaction(reaction, user)
+
+            # Private channel
+            # await message.remove_reaction(reaction, ctx.author)
+
+        except Exception as e:
+            print(e)
+            break
+
+    print(result)
+    # user_feedback ="For user: {} ,Final decision is {}".format(ctx.author, i)
+    # print(user_feedback)
+    await ctx.channel.send(result)
+    # Than we can base on user's decision to Update inforamtion to DB
+    # await message.clear_reactions()
+    await message.delete()
+    # await message.clear_reactions()
+
 
 @client.event
 async def on_message(message):
@@ -44,14 +146,13 @@ async def on_message(message):
     msg = message.content
 
     if msg.startswith('$hello'):
-        await message.channel.send('Hello!')
+        # await message.channel.send(start_msg)
+        await send_join_msg(message.author)
 
     if msg.startswith('$createUser'):
 
-        create_user(author.id,author.name)
+        DB.create_user(author.id,author.name)
         await message.channel.send("Successful create USER {}".format(author.name))
-
-
 
     if msg.startswith('$inspire'):
         quote = get_quote()
@@ -99,8 +200,15 @@ async def on_message(message):
 
 
 
-@client.event
-async def on_member_join(member):
-    await member.send('Private message')
+    if msg.startswith('$interaction'):
+        await interaction(message)
+ 
 
+@client.event
+async def on_member_remove(member):
+    print("new member join")
+    await send_join_msg(member)
+
+
+# keep_alive()
 client.run(token)
