@@ -2,12 +2,14 @@ import discord
 from discord import user
 import requests
 import json, random, os
-import DB
-import emoji
+import DB, time
 from keep_alive import keep_alive
-from discord_components import DiscordComponents, Button, ButtonStyle, InteractionType
+from discord.ext import commands
 
-client = discord.Client()
+intents = discord.Intents.default()
+intents.members = True
+client = discord.Client(intents=intents)
+
 token = os.environ['DISCORD_TOKEN']
 starter_encouragements = [
   "Cheer up!",
@@ -59,8 +61,6 @@ https://tenor.com/view/wtf-huh-what-the-heck-puppy-cute-gif-17738058
     embed.add_field(name='Second things you need to know' ,value='[Go to another Channel](https://discord.com/channels/741527808400031854/848522274528034837/849646113140768788)', inline=False)
     embed.add_field(name='VIdeo ' ,value='[VIdeo](https://www.youtube.com/watch?v=EphQsR3-_-U&ab_channel=CeeCee)', inline=False)
 
-    
-    channel = member.channel
     await member.send(content = start_msg ,embed=embed)
 
 result = {}
@@ -198,17 +198,43 @@ async def on_message(message):
         ```
         '''.format(tokens))
 
-
-
     if msg.startswith('$interaction'):
         await interaction(message)
+
+    if msg.startswith('$verify'):
+        print("Add role to user")
+        member = author
+        role_ID = 849863921765842954 # verify Chat channel
+        verifiedRole = discord.utils.get(member.guild.roles, id = role_ID)
+        await member.add_roles(verifiedRole)
+
+    if msg.startswith('$remove_role'):
+        await remove_role(author)
+
+
+@commands.has_role('TEST_users')
+async def remove_role(member: discord.Member):
+    role = discord.utils.get(member.guild.roles, name = 'TEST_users')
+    await member.remove_roles(role)
+    time.sleep(3)
+    await member.send("You already remove 'TEST_users' role")
+
+
+
  
 
 @client.event
-async def on_member_remove(member):
+async def on_member_join(member):
     print("new member join")
     await send_join_msg(member)
+    time.sleep(10)   #The parameter is in seconds, so it'll wait for 30 seconds
+    # #this role is for Verification Channel
+    # role_ID = 849863921765842954 # verify chat channel
+    role_ID = 848537536716734474 # TEST users
+
+    verifiedRole = discord.utils.get(member.guild.roles, id = role_ID)
+    await member.add_roles(verifiedRole)
 
 
-# keep_alive()
+keep_alive()
 client.run(token)
